@@ -1,0 +1,20 @@
+{
+  "appName": { "message": "SnapJot" },
+  "appDesc": {
+    "message": "Snap a region, add a box or a quick note, copy to clipboard. No account, no cloud."
+  },
+  "actionTitle": { "message": "SnapJot: Capture (click, then drag a region)" },
+  "restrictedPage": {
+    "message": "SnapJot: This page can't be captured.\n(chrome:// pages and the Chrome Web Store are restricted.)\nTry it on a normal web page."
+  },
+  "hintSelect": { "message": "Drag to select an area  ·  Esc to cancel" },
+  "toolBox": { "message": "Box" },
+  "toolText": { "message": "Text" },
+  "toolUndo": { "message": "Undo" },
+  "toolCopy": { "message": "Copy" },
+  "toolSave": { "message": "Save" },
+  "notePlaceholder": { "message": "Note…" },
+  "copied": { "message": "Copied! Paste with Cmd/Ctrl + V" },
+  "copyFellBack": { "message": "Clipboard blocked — saved as PNG instead" },
+  "savedPng": { "message": "Saved as PNG" }
+}
