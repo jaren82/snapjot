@@ -17,6 +17,15 @@
       "32": "icons/icon32.png"
     }
   },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Start SnapJot capture"
+    }
+  },
   "background": {
     "service_worker": "background.js"
   },

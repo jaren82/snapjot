@@ -5,7 +5,7 @@ Snap a region of any web page, add a **box** or a **quick note**, and **copy str
 A deliberately small, fast alternative to bloated all-in-one screenshot tools.
 
 ## How it works
-1. Click the SnapJot toolbar icon.
+1. Click the SnapJot toolbar icon — or press the shortcut (default **Cmd/Ctrl + Shift + S**; change it at `chrome://extensions/shortcuts`).
 2. Drag to select an area (the page freezes so the selection is stable).
 3. Use the toolbar: **Box** to draw a red rectangle, **Text** to drop a quick note.
 4. **Copy** → it's on your clipboard. Or **Save** to download a PNG. `Esc` cancels anytime.
