@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>SnapJot harness</title>
+  <style>
+    html,body{margin:0;height:100%}
+    #page{height:100vh;background:#f4f6fb;font:16px system-ui;padding:24px;box-sizing:border-box}
+    .blk{width:200px;height:150px;background:#34a853;margin:24px 0}
+  </style>
+</head>
+<body>
+  <!-- fake page content (so a "screenshot" has something to capture) -->
+  <div id="page">
+    <h1>SnapJot test page</h1>
+    <div class="blk"></div>
+    <p>Drag-select around the green block, draw a box, add a note.</p>
+  </div>
+
+  <!-- 1) chrome.* shim must exist BEFORE content.js loads -->
+  <script>
+    const MSG = {
+      hintSelect: "Drag to select", toolBox: "Box", toolText: "Text",
+      toolUndo: "Undo", toolCopy: "Copy", toolSave: "Save",
+      notePlaceholder: "Note…", copied: "Copied!", copyFellBack: "Saved PNG",
+      savedPng: "Saved PNG",
+    };
+    const _listeners = [];
+    let __copiedBlob = null;
+    window.chrome = {
+      i18n: { getMessage: (k) => MSG[k] || k },
+      runtime: { onMessage: { addListener: (fn) => _listeners.push(fn) } },
+    };
+    window.__send = (m) => _listeners.forEach((fn) => fn(m));
+    // capture clipboard writes instead of touching the real (insecure-context) API
+    window.ClipboardItem = function (items) { this.items = items; };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        write: async (arr) => { __copiedBlob = await arr[0].items["image/png"]; },
+      },
+    });
+    window.__getCopied = () => __copiedBlob;
+  </script>
+
+  <!-- 2) the REAL extension logic, unchanged -->
+  <script src="../content.js"></script>
+
+  <!-- 3) self-driving test -->
+  <script>
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    function mouse(target, type, x, y) {
+      target.dispatchEvent(new MouseEvent(type, {
+        bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0,
+      }));
+    }
+    function countColors(canvas) {
+      const g = canvas.getContext("2d");
+      const d = g.getImageData(0, 0, canvas.width, canvas.height).data;
+      let red = 0, green = 0, nonblank = 0;
+      for (let i = 0; i < d.length; i += 4) {
+        const r = d[i], gg = d[i + 1], b = d[i + 2], a = d[i + 3];
+        if (a > 0) nonblank++;
+        if (r > 200 && gg < 90 && b < 90) red++;
+        if (gg > 120 && r < 120 && b < 120) green++;
+      }
+      return { red, green, nonblank };
+    }
+
+    window.runTest = async function () {
+      const out = { steps: [] }, ok = (k, v) => out.steps.push([k, !!v, v]);
+      try {
+        const W = window.innerWidth, H = window.innerHeight;
+
+        // synthetic screenshot sized to the CSS viewport (so scale = 1)
+        const c = document.createElement("canvas");
+        c.width = W; c.height = H;
+        const g = c.getContext("2d");
+        g.fillStyle = "#eaf0fb"; g.fillRect(0, 0, W, H);
+        g.fillStyle = "#34a853"; g.fillRect(100, 110, 200, 150); // green block
+        g.fillStyle = "#111"; g.font = "20px sans-serif";
+        g.fillText("captured frame", 40, 60);
+        const dataUrl = c.toDataURL("image/png");
+
+        // --- start ---
+        window.__send({ type: "SNAPJOT_START", dataUrl });
+        await sleep(60);
+        const root = document.documentElement.lastElementChild;
+        ok("overlay_created", root && root.querySelector('img[src^="data:image"]'));
+
+        // --- select region (80,90)-(340,320) : includes the green block ---
+        const sx = 80, sy = 90, ex = 340, ey = 320;
+        mouse(document.elementFromPoint(sx, sy), "mousedown", sx, sy);
+        mouse(document, "mousemove", ex, ey);
+        mouse(document, "mouseup", ex, ey);
+        await sleep(60);
+        const canvas = root.querySelector("canvas");
+        ok("annotate_canvas_present", canvas);
+        if (!canvas) { out.result = "FAIL"; return out; }
+
+        const cropColors = countColors(canvas);
+        ok("crop_has_green_block", cropColors.green > 200, cropColors.green);
+
+        // --- draw a box on the canvas (default tool) ---
+        const bx1 = 130, by1 = 150, bx2 = 290, by2 = 270;
+        mouse(canvas, "mousedown", bx1, by1);
+        mouse(document, "mousemove", bx2, by2);
+        mouse(document, "mouseup", bx2, by2);
+        await sleep(40);
+        const afterBox = countColors(canvas);
+        ok("box_drew_red", afterBox.red > 50, afterBox.red);
+
+        // --- add a text note ---
+        const bar = root.querySelector("div[style*='flex']");
+        const textBtn = [...root.querySelectorAll("button")].find((b) =>
+          /Text/.test(b.textContent)
+        );
+        ok("text_button_found", textBtn);
+        if (textBtn) {
+          textBtn.click();
+          mouse(canvas, "mousedown", 160, 200);
+          await sleep(20);
+          const input = root.querySelector("input");
+          ok("text_input_opened", input);
+          if (input) {
+            input.value = "HERE?";
+            input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+            await sleep(40);
+          }
+        }
+        const afterText = countColors(canvas);
+        ok("text_added_more_red", afterText.red > afterBox.red, {
+          before: afterBox.red, after: afterText.red,
+        });
+
+        // --- copy (uses our clipboard shim) ---
+        const copyBtn = [...root.querySelectorAll("button")].find((b) =>
+          /Copy/.test(b.textContent)
+        );
+        ok("copy_button_found", copyBtn);
+        if (copyBtn) { copyBtn.click(); await sleep(80); }
+        const blob = window.__getCopied();
+        ok("clipboard_received_png", blob && blob.type === "image/png" && blob.size > 0,
+          blob ? { type: blob.type, size: blob.size } : null);
+
+        // overlay should be cleaned up after copy
+        await sleep(40);
+        ok("overlay_cleaned_up", document.documentElement.lastElementChild !== root ||
+          !document.querySelector("canvas"));
+
+        out.result = out.steps.every((s) => s[1]) ? "PASS" : "FAIL";
+      } catch (e) {
+        out.result = "ERROR";
+        out.error = String(e && e.stack || e);
+      }
+      return out;
+    };
+  </script>
+</body>
+</html>
