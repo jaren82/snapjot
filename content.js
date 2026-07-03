@@ -1,9 +1,16 @@
 // SnapJot content script
 // Select a region → annotate with box/text → copy to clipboard. Zero dependencies.
 (() => {
-  // Guard against double-injection (re-click) so listeners aren't duplicated
-  if (window.__snapjotInit) return;
-  window.__snapjotInit = true;
+  // Guard against double-injection (re-click) so listeners aren't duplicated.
+  // The guard is a liveness probe, not a boolean: after an extension reload
+  // the old copy's chrome.runtime is invalidated, so it must NOT block the
+  // fresh injection (its own listener is already dead).
+  try {
+    if (window.__snapjotPing && window.__snapjotPing()) return;
+  } catch (_) {
+    /* stale copy from a previous extension version — take over */
+  }
+  window.__snapjotPing = () => !!(chrome.runtime && chrome.runtime.id);
 
   const Z = 2147483640; // sit above page content
   const RED = "#ff3b30";
@@ -452,7 +459,12 @@
         root
       );
       input.placeholder = t("notePlaceholder");
+      // removing a focused input fires blur → guard so commit runs once
+      // (and Esc truly cancels instead of blur-committing the text)
+      let done = false;
       const commit = () => {
+        if (done) return;
+        done = true;
         const text = input.value.trim();
         input.remove();
         if (text) {
@@ -463,7 +475,10 @@
       input.addEventListener("keydown", (ev) => {
         ev.stopPropagation();
         if (ev.key === "Enter") commit();
-        else if (ev.key === "Escape") input.remove();
+        else if (ev.key === "Escape") {
+          done = true;
+          input.remove();
+        }
       });
       // focus after the triggering click fully settles; only then arm the
       // blur-commit, so the input can't be blurred away in the same tick
