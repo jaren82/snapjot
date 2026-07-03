@@ -54,22 +54,47 @@ function encodePng(N, pixelFn) {
   ]);
 }
 
-function pixel(x, y, N) {
-  const r = 0.2 * N; // corner radius
-  const cx = Math.min(x, N - 1 - x);
-  const cy = Math.min(y, N - 1 - y);
+// analytic shape at float coords (0..N) — sampled many times per pixel below
+function shape(fx, fy, N) {
+  const r = 0.22 * N; // corner radius
+  const cx = Math.min(fx, N - fx);
+  const cy = Math.min(fy, N - fy);
   if (cx < r && cy < r) {
     const dx = r - cx,
       dy = r - cy;
     if (dx * dx + dy * dy > r * r) return [0, 0, 0, 0]; // rounded corner
   }
-  const a = 0.27 * N,
-    b = 0.73 * N,
-    t = Math.max(1, Math.round(0.1 * N));
-  const inBox = x >= a && x <= b && y >= a && y <= b;
-  const inInner = x >= a + t && x <= b - t && y >= a + t && y <= b - t;
+  const a = 0.28 * N,
+    b = 0.72 * N,
+    t = Math.max(1.2, 0.09 * N);
+  const inBox = fx >= a && fx <= b && fy >= a && fy <= b;
+  const inInner = fx >= a + t && fx <= b - t && fy >= a + t && fy <= b - t;
   if (inBox && !inInner) return [255, 255, 255, 255]; // white box outline
   return [255, 59, 48, 255]; // red
+}
+
+// 4x4 supersampling → smooth anti-aliased edges at every size
+const SS = 4;
+function pixel(x, y, N) {
+  let r = 0,
+    g = 0,
+    b = 0,
+    a = 0;
+  for (let sy = 0; sy < SS; sy++)
+    for (let sx = 0; sx < SS; sx++) {
+      const c = shape(x + (sx + 0.5) / SS, y + (sy + 0.5) / SS, N);
+      // premultiply so transparent samples don't tint the average
+      r += c[0] * (c[3] / 255);
+      g += c[1] * (c[3] / 255);
+      b += c[2] * (c[3] / 255);
+      a += c[3];
+    }
+  const n = SS * SS;
+  const alpha = a / n;
+  if (alpha < 1) return [0, 0, 0, 0];
+  // un-premultiply: avg color = (Σ premult) / n ÷ (avg alpha / 255) = v*255/a
+  const un = (v) => Math.min(255, Math.round((v * 255) / a));
+  return [un(r), un(g), un(b), Math.round(alpha)];
 }
 
 // --- independent structural validator (re-reads bytes) ---

@@ -13,6 +13,8 @@
   "toolUndo": { "message": "Undo" },
   "toolCopy": { "message": "Copy" },
   "toolSave": { "message": "Save" },
+  "copyTitle": { "message": "Copy to clipboard — paste with Cmd/Ctrl+V" },
+  "saveTitle": { "message": "Download as PNG file" },
   "notePlaceholder": { "message": "Note…" },
   "copied": { "message": "Copied! Paste with Cmd/Ctrl + V" },
   "copyFellBack": { "message": "Clipboard blocked — saved as PNG instead" },

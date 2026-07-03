@@ -51,27 +51,35 @@
     session = null;
   }
 
-  function toast(text) {
+  function toast(text, accent) {
     const el2 = el(
       "div",
       {
         position: "fixed",
         left: "50%",
-        bottom: "32px",
+        bottom: "36px",
         transform: "translateX(-50%)",
-        background: "rgba(20,20,20,0.92)",
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        background: "rgba(20,20,22,0.95)",
         color: "#fff",
         font: "600 14px/1.4 " + FONT,
-        padding: "10px 16px",
-        borderRadius: "10px",
+        padding: "11px 18px",
+        borderRadius: "11px",
         zIndex: String(Z + 5),
-        boxShadow: "0 6px 24px rgba(0,0,0,0.35)",
+        boxShadow:
+          "0 10px 32px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.14)",
         pointerEvents: "none",
       },
       document.body
     );
-    el2.textContent = text;
-    setTimeout(() => el2.remove(), 2400);
+    const check =
+      '<svg width="17" height="17" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="' +
+      (accent || RED) +
+      '"/><path d="m4.8 8.2 2.2 2.2 4.2-4.6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    el2.innerHTML = check + "<span>" + text + "</span>";
+    setTimeout(() => el2.remove(), 2800);
   }
 
   // ---------- step 1: region selection ----------
@@ -300,6 +308,9 @@
         preview = { type: "box", x: sx, y: sy, w: 0, h: 0 };
         e.preventDefault();
       } else {
+        // preventDefault stops the click's default focus-shift, which would
+        // otherwise blur (and instantly remove) the input we're about to create
+        e.preventDefault();
         addTextInput(e);
       }
     }
@@ -352,7 +363,6 @@
         root
       );
       input.placeholder = t("notePlaceholder");
-      input.focus();
       const commit = () => {
         const text = input.value.trim();
         input.remove();
@@ -366,22 +376,37 @@
         if (ev.key === "Enter") commit();
         else if (ev.key === "Escape") input.remove();
       });
-      input.addEventListener("blur", commit);
+      // focus after the triggering click fully settles; only then arm the
+      // blur-commit, so the input can't be blurred away in the same tick
+      setTimeout(() => {
+        input.focus();
+        input.addEventListener("blur", commit);
+      }, 50);
     }
 
-    // toolbar
+    // toolbar — quiet dark bar; Copy (clipboard) is the single red primary
+    const ICONS = {
+      box: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.7"/></svg>',
+      text: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3.5 4.5V3h9v1.5M8 3v10M6 13h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      undo: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6.5 3.5 3 7l3.5 3.5M3 7h6a4 4 0 0 1 0 8H8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      copy: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.7"/><path d="M10.5 3.5h-6a1 1 0 0 0-1 1v6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+      save: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2.5v7m0 0 3-3m-3 3-3-3M3 11.5v1a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      close: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="m4 4 8 8m0-8-8 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+    };
+
     const bar = el(
       "div",
       {
         position: "fixed",
         zIndex: String(Z + 2),
         display: "flex",
-        gap: "4px",
-        background: "rgba(28,28,30,0.96)",
-        padding: "6px",
-        borderRadius: "12px",
-        boxShadow: "0 8px 30px rgba(0,0,0,0.4)",
-        font: "600 13px " + FONT,
+        alignItems: "center",
+        gap: "3px",
+        background: "rgba(24,24,26,0.97)",
+        padding: "5px",
+        borderRadius: "11px",
+        boxShadow: "0 10px 32px rgba(0,0,0,0.45), 0 0 0 0.5px rgba(255,255,255,0.14)",
+        font: "600 12.5px " + FONT,
       },
       root
     );
@@ -393,44 +418,78 @@
       Math.max(8, Math.min(rect.x, window.innerWidth - 400)) + "px";
     bar.style.top = barTop + "px";
 
-    function mkBtn(label, on, primary) {
+    const IDLE = "transparent";
+    const HOVER = "rgba(255,255,255,0.10)";
+    function mkBtn(iconKey, label, title, on, primary) {
       const b = el(
         "button",
         {
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "5px",
           border: "none",
-          borderRadius: "8px",
-          padding: "7px 11px",
+          borderRadius: "7px",
+          padding: label ? "6px 10px" : "6px 7px",
           cursor: "pointer",
-          color: primary ? "#fff" : "#eee",
-          background: primary ? RED : "rgba(255,255,255,0.12)",
+          color: primary ? "#fff" : "#d8d8dc",
+          background: primary ? RED : IDLE,
           font: "inherit",
           whiteSpace: "nowrap",
+          lineHeight: "1",
         },
         bar
       );
-      b.textContent = label;
+      b.innerHTML = ICONS[iconKey] + (label ? "<span>" + label + "</span>" : "");
+      if (title) b.title = title;
+      b.addEventListener("mouseenter", () => {
+        if (!primary && b.dataset.active !== "1") b.style.background = HOVER;
+        if (primary) b.style.background = "#e0342b";
+      });
+      b.addEventListener("mouseleave", () => {
+        if (!primary && b.dataset.active !== "1") b.style.background = IDLE;
+        if (primary) b.style.background = RED;
+      });
       b.addEventListener("click", (ev) => {
         ev.preventDefault();
         on(b);
       });
       return b;
     }
+    function divider() {
+      el(
+        "div",
+        {
+          width: "1px",
+          height: "18px",
+          background: "rgba(255,255,255,0.15)",
+          margin: "0 3px",
+        },
+        bar
+      );
+    }
 
-    const boxBtn = mkBtn("⬚ " + t("toolBox"), () => setTool("box"));
-    const textBtn = mkBtn("T " + t("toolText"), () => setTool("text"));
-    mkBtn("↶ " + t("toolUndo"), () => {
+    const boxBtn = mkBtn("box", t("toolBox"), null, () => setTool("box"));
+    const textBtn = mkBtn("text", t("toolText"), null, () => setTool("text"));
+    divider();
+    mkBtn("undo", null, t("toolUndo"), () => {
       annotations.pop();
       redraw();
     });
-    mkBtn("📋 " + t("toolCopy"), copy, true);
-    mkBtn("⬇︎ " + t("toolSave"), savePng);
-    mkBtn("✕", cleanup);
+    divider();
+    mkBtn("copy", t("toolCopy"), t("copyTitle"), copy, true);
+    mkBtn("save", null, t("saveTitle"), savePng);
+    mkBtn("close", null, null, cleanup);
 
     function setTool(tl) {
       tool = tl;
       canvas.style.cursor = tl === "text" ? "text" : "crosshair";
-      boxBtn.style.background = tl === "box" ? RED : "rgba(255,255,255,0.12)";
-      textBtn.style.background = tl === "text" ? RED : "rgba(255,255,255,0.12)";
+      const on = (b, active) => {
+        b.dataset.active = active ? "1" : "0";
+        b.style.background = active ? "rgba(255,255,255,0.16)" : IDLE;
+        b.style.color = active ? "#fff" : "#d8d8dc";
+      };
+      on(boxBtn, tl === "box");
+      on(textBtn, tl === "text");
     }
     setTool("box");
 
