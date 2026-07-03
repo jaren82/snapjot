@@ -338,11 +338,30 @@
         ctx.restore();
       }
     }
+    // subtle bottom-right credit — doubles as the future free-tier watermark
+    // (paid = removal), and every shared capture advertises the tool
+    function drawWatermark() {
+      const s = Math.max(10, Math.round(11 * scale));
+      ctx.save();
+      ctx.font = "600 " + s + "px " + FONT;
+      const label = "made with SnapJot";
+      const w = ctx.measureText(label).width;
+      const pad = Math.round(s * 0.7);
+      if (cw > w * 1.6 && ch > s * 4) {
+        ctx.textBaseline = "bottom";
+        ctx.shadowColor = "rgba(0,0,0,0.55)";
+        ctx.shadowBlur = s * 0.35;
+        ctx.fillStyle = "rgba(255,255,255,0.82)";
+        ctx.fillText(label, cw - w - pad, ch - Math.round(pad * 0.6));
+      }
+      ctx.restore();
+    }
     function redraw() {
       ctx.clearRect(0, 0, cw, ch);
       ctx.drawImage(crop, 0, 0);
       annotations.forEach(drawOne);
       if (preview) drawOne(preview);
+      drawWatermark();
     }
     redraw();
 
