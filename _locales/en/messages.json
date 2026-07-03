@@ -7,7 +7,7 @@
   "restrictedPage": {
     "message": "SnapJot: This page can't be captured.\n(chrome:// pages and the Chrome Web Store are restricted.)\nTry it on a normal web page."
   },
-  "hintSelect": { "message": "Drag to select an area  ·  Esc to cancel" },
+  "hintSelect": { "message": "Drag to select an area  ·  Enter for full screen  ·  Esc to cancel" },
   "toolBox": { "message": "Box" },
   "toolText": { "message": "Text" },
   "toolArrow": { "message": "Arrow sticker" },

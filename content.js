@@ -222,12 +222,25 @@
       enterAnnotate(r);
     }
 
+    // Enter = capture the whole visible screen (no dragging needed)
+    function onEnter(e) {
+      if (e.key !== "Enter" || dragging) return;
+      e.preventDefault();
+      document.removeEventListener("keydown", onEnter, true);
+      root.removeEventListener("mousedown", onDown);
+      hint.style.display = "none";
+      dim.style.display = "none";
+      enterAnnotate({ x: 0, y: 0, w: vw, h: vh });
+    }
+    document.addEventListener("keydown", onEnter, true);
+
     root.addEventListener("mousedown", onDown);
     document.addEventListener("mousemove", onMove, true);
     document.addEventListener("mouseup", onUp, true);
     session.detachers.push(() => {
       document.removeEventListener("mousemove", onMove, true);
       document.removeEventListener("mouseup", onUp, true);
+      document.removeEventListener("keydown", onEnter, true);
     });
   }
 
@@ -348,7 +361,7 @@
     // subtle bottom-right credit — doubles as the future free-tier watermark
     // (paid = removal), and every shared capture advertises the tool
     function drawWatermark() {
-      const s = Math.max(10, Math.round(11 * scale));
+      const s = Math.max(12, Math.round(14 * scale));
       ctx.save();
       ctx.font = "600 " + s + "px " + FONT;
       const label = t("watermark");
@@ -356,9 +369,9 @@
       const pad = Math.round(s * 0.7);
       if (cw > w * 1.6 && ch > s * 4) {
         ctx.textBaseline = "bottom";
-        ctx.shadowColor = "rgba(0,0,0,0.55)";
+        ctx.shadowColor = "rgba(0,0,0,0.45)";
         ctx.shadowBlur = s * 0.35;
-        ctx.fillStyle = "rgba(255,255,255,0.82)";
+        ctx.fillStyle = "rgba(255,255,255,0.6)";
         ctx.fillText(label, cw - w - pad, ch - Math.round(pad * 0.6));
       }
       ctx.restore();
@@ -658,14 +671,15 @@
     mkBtn("save", null, t("saveTitle"), savePng);
     mkBtn("close", null, null, cleanup);
 
-    // cursor that previews the arrow sticker (tip = hotspot, current color)
+    // cursor that previews the arrow sticker — same ↗ direction as the stamp
+    // (tip at top-right = hotspot, current color)
     const arrowCursor = (c) => {
       const svg =
         '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">' +
-        '<path d="M3 3 L27.7 9.4 L22.5 14.7 L36.6 28.8 L28.8 36.6 L14.7 22.5 L9.4 27.7 Z" fill="' +
+        '<path d="M37 3 L12.3 9.4 L17.5 14.7 L3.4 28.8 L11.2 36.6 L25.3 22.5 L30.6 27.7 Z" fill="' +
         c +
         '" stroke="white" stroke-width="2" stroke-linejoin="round"/></svg>';
-      return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '") 3 3, crosshair';
+      return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '") 37 3, crosshair';
     };
     function applyCursor() {
       canvas.style.cursor =

@@ -7,7 +7,7 @@
   "restrictedPage": {
     "message": "SnapJot: 이 페이지에서는 캡처할 수 없습니다.\n(chrome:// 페이지나 크롬 웹스토어 등은 제한됩니다)\n일반 웹페이지에서 시도해 주세요."
   },
-  "hintSelect": { "message": "드래그해서 영역을 선택하세요  ·  Esc로 취소" },
+  "hintSelect": { "message": "드래그해서 영역 선택  ·  Enter = 전체 화면  ·  Esc 취소" },
   "toolBox": { "message": "박스" },
   "toolText": { "message": "텍스트" },
   "toolArrow": { "message": "화살표 스티커" },
