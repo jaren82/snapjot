@@ -10,6 +10,7 @@
   "hintSelect": { "message": "드래그해서 영역을 선택하세요  ·  Esc로 취소" },
   "toolBox": { "message": "박스" },
   "toolText": { "message": "텍스트" },
+  "toolArrow": { "message": "화살표 스티커" },
   "toolUndo": { "message": "취소" },
   "toolCopy": { "message": "복사" },
   "toolSave": { "message": "저장" },

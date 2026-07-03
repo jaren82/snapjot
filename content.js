@@ -260,23 +260,93 @@
     const annotations = [];
     let preview = null;
     let tool = "box";
+    const COLORS = ["#ff3b30", "#ff9500", "#ffcc00", "#34c759", "#007aff"];
+    let color = COLORS[0];
+    // readable text on a colored bubble (yellow needs dark text)
+    const inkFor = (c) => {
+      const n = parseInt(c.slice(1), 16);
+      const L =
+        0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
+      return L > 186 ? "#3a3000" : "#fff";
+    };
     const scale = cw / rect.w; // display→native ≈ dpr
     const lineW = Math.max(2, Math.round(3 * scale));
     const fontPx = Math.round(20 * scale);
 
     function drawOne(a) {
+      const col = a.color || RED;
       if (a.type === "box") {
         ctx.lineWidth = lineW;
-        ctx.strokeStyle = RED;
+        ctx.strokeStyle = col;
         ctx.strokeRect(a.x, a.y, a.w, a.h);
+      } else if (a.type === "arrow") {
+        // defect-inspection sticker: chunky arrow, tip at the clicked spot,
+        // body extending down-right (pointing ↖), white outline + drop shadow
+        const u = fontPx / 20; // size unit
+        const headL = 22 * u,
+          headW = 26 * u,
+          shaftW = 11 * u,
+          shaftL = 20 * u;
+        ctx.save();
+        ctx.translate(a.x, a.y);
+        ctx.rotate(Math.PI / 4);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(headW / 2, headL);
+        ctx.lineTo(shaftW / 2, headL);
+        ctx.lineTo(shaftW / 2, headL + shaftL);
+        ctx.lineTo(-shaftW / 2, headL + shaftL);
+        ctx.lineTo(-shaftW / 2, headL);
+        ctx.lineTo(-headW / 2, headL);
+        ctx.closePath();
+        ctx.shadowColor = "rgba(0,0,0,0.4)";
+        ctx.shadowBlur = 6 * u;
+        ctx.shadowOffsetY = 2 * u;
+        ctx.fillStyle = col;
+        ctx.fill();
+        ctx.shadowColor = "transparent";
+        ctx.lineWidth = Math.max(1.5, 2.2 * u);
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = "#fff";
+        ctx.stroke();
+        ctx.restore();
       } else {
+        // speech bubble: red rounded rect + tail pointing at the clicked spot
         ctx.font = "700 " + fontPx + "px " + FONT;
+        const padX = Math.round(fontPx * 0.55);
+        const padY = Math.round(fontPx * 0.4);
+        const tw = ctx.measureText(a.text).width;
+        const bw = tw + padX * 2;
+        const bh = fontPx + padY * 2;
+        const tail = Math.max(6, Math.round(fontPx * 0.55));
+        const rr = Math.round(bh * 0.32);
+        let bx = Math.round(a.x - bw * 0.2);
+        bx = Math.max(2, Math.min(bx, cw - bw - 2));
+        let by = a.y - tail - bh;
+        const below = by < 2; // no room above → flip under the point
+        if (below) by = a.y + tail;
+        const baseY = below ? by : by + bh;
+        const tipX = Math.max(bx + rr + tail, Math.min(a.x, bx + bw - rr - tail));
+
+        ctx.save();
+        ctx.shadowColor = "rgba(0,0,0,0.35)";
+        ctx.shadowBlur = fontPx * 0.5;
+        ctx.shadowOffsetY = Math.max(1, Math.round(fontPx * 0.08));
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.roundRect(bx, by, bw, bh, rr);
+        ctx.fill();
+        ctx.shadowColor = "transparent";
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(tipX - tail, baseY + (below ? 1 : -1));
+        ctx.lineTo(tipX + tail, baseY + (below ? 1 : -1));
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = inkFor(col);
         ctx.textBaseline = "top";
-        ctx.lineWidth = Math.max(2, Math.round(fontPx / 6));
-        ctx.strokeStyle = "rgba(255,255,255,0.9)";
-        ctx.fillStyle = RED;
-        ctx.strokeText(a.text, a.x, a.y);
-        ctx.fillText(a.text, a.x, a.y);
+        ctx.fillText(a.text, bx + padX, by + padY);
+        ctx.restore();
       }
     }
     function redraw() {
@@ -305,8 +375,13 @@
         const p = toCanvas(e);
         sx = p.x;
         sy = p.y;
-        preview = { type: "box", x: sx, y: sy, w: 0, h: 0 };
+        preview = { type: "box", x: sx, y: sy, w: 0, h: 0, color };
         e.preventDefault();
+      } else if (tool === "arrow") {
+        e.preventDefault();
+        const p = toCanvas(e);
+        annotations.push({ type: "arrow", x: p.x, y: p.y, color });
+        redraw();
       } else {
         // preventDefault stops the click's default focus-shift, which would
         // otherwise blur (and instantly remove) the input we're about to create
@@ -323,6 +398,7 @@
         y: Math.min(sy, p.y),
         w: Math.abs(p.x - sx),
         h: Math.abs(p.y - sy),
+        color,
       };
       redraw();
     }
@@ -344,21 +420,26 @@
     // text input
     function addTextInput(e) {
       const p = toCanvas(e);
+      // input styled like the final bubble (WYSIWYG), floated above the click
+      const bubbleColor = color;
+      const ink = inkFor(bubbleColor);
       const input = el(
         "input",
         {
           position: "fixed",
-          left: e.clientX + "px",
-          top: e.clientY + "px",
+          left: Math.max(4, e.clientX - 12) + "px",
+          top: Math.max(4, e.clientY - 46) + "px",
           font: "700 20px " + FONT,
-          color: RED,
-          background: "rgba(255,255,255,0.9)",
-          border: "1px dashed " + RED,
-          borderRadius: "4px",
-          padding: "1px 4px",
+          color: ink,
+          background: bubbleColor,
+          border: "none",
+          borderRadius: "10px",
+          padding: "7px 11px",
           zIndex: String(Z + 3),
           outline: "none",
-          minWidth: "40px",
+          minWidth: "60px",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.35)",
+          caretColor: ink,
         },
         root
       );
@@ -367,7 +448,7 @@
         const text = input.value.trim();
         input.remove();
         if (text) {
-          annotations.push({ type: "text", x: p.x, y: p.y, text });
+          annotations.push({ type: "text", x: p.x, y: p.y, text, color: bubbleColor });
           redraw();
         }
       };
@@ -388,6 +469,8 @@
     const ICONS = {
       box: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.7"/></svg>',
       text: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3.5 4.5V3h9v1.5M8 3v10M6 13h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      arrow:
+        '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 3h6M3 3v6M3 3l6.2 6.2M9.5 13.5l1.7-4 2.6 2.6-4.3 1.4Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
       undo: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6.5 3.5 3 7l3.5 3.5M3 7h6a4 4 0 0 1 0 8H8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
       copy: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.7"/><path d="M10.5 3.5h-6a1 1 0 0 0-1 1v6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
       save: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2.5v7m0 0 3-3m-3 3-3-3M3 11.5v1a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -415,7 +498,7 @@
         ? rect.y + rect.h + 10
         : Math.max(8, rect.y - 50);
     bar.style.left =
-      Math.max(8, Math.min(rect.x, window.innerWidth - 400)) + "px";
+      Math.max(8, Math.min(rect.x, window.innerWidth - 480)) + "px";
     bar.style.top = barTop + "px";
 
     const IDLE = "transparent";
@@ -470,6 +553,33 @@
 
     const boxBtn = mkBtn("box", t("toolBox"), null, () => setTool("box"));
     const textBtn = mkBtn("text", t("toolText"), null, () => setTool("text"));
+    const arrowBtn = mkBtn("arrow", null, t("toolArrow"), () => setTool("arrow"));
+    divider();
+    // color palette dots
+    const dots = COLORS.map((c) => {
+      const d = el(
+        "button",
+        {
+          width: "16px",
+          height: "16px",
+          borderRadius: "50%",
+          background: c,
+          border: "2px solid transparent",
+          padding: "0",
+          cursor: "pointer",
+          flex: "0 0 auto",
+        },
+        bar
+      );
+      d.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        color = c;
+        dots.forEach((o) => (o.style.border = "2px solid transparent"));
+        d.style.border = "2px solid #fff";
+      });
+      return d;
+    });
+    dots[0].style.border = "2px solid #fff";
     divider();
     mkBtn("undo", null, t("toolUndo"), () => {
       annotations.pop();
@@ -490,6 +600,7 @@
       };
       on(boxBtn, tl === "box");
       on(textBtn, tl === "text");
+      on(arrowBtn, tl === "arrow");
     }
     setTool("box");
 

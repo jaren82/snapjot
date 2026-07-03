@@ -10,6 +10,7 @@
   "hintSelect": { "message": "Drag to select an area  ·  Esc to cancel" },
   "toolBox": { "message": "Box" },
   "toolText": { "message": "Text" },
+  "toolArrow": { "message": "Arrow sticker" },
   "toolUndo": { "message": "Undo" },
   "toolCopy": { "message": "Copy" },
   "toolSave": { "message": "Save" },
