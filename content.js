@@ -344,7 +344,7 @@
       const s = Math.max(10, Math.round(11 * scale));
       ctx.save();
       ctx.font = "600 " + s + "px " + FONT;
-      const label = "made with SnapJot";
+      const label = t("watermark");
       const w = ctx.measureText(label).width;
       const pad = Math.round(s * 0.7);
       if (cw > w * 1.6 && ch > s * 4) {

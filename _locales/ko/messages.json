@@ -17,6 +17,7 @@
   "copyTitle": { "message": "클립보드로 복사 — ⌘V로 붙여넣기" },
   "saveTitle": { "message": "PNG 파일로 다운로드" },
   "notePlaceholder": { "message": "메모…" },
+  "watermark": { "message": "created by 스냅잣" },
   "copied": { "message": "복사됐어요! ⌘V / Ctrl+V 로 붙여넣으세요" },
   "copyFellBack": { "message": "복사 권한이 막혀 PNG로 저장했어요" },
   "savedPng": { "message": "PNG로 저장했어요" }
