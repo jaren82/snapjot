@@ -578,8 +578,16 @@
     const textBtn = mkBtn("text", t("toolText"), null, () => setTool("text"));
     const arrowBtn = mkBtn("arrow", null, t("toolArrow"), () => setTool("arrow"));
     divider();
-    // color palette dots
-    const dots = COLORS.map((c) => {
+    // color palette: preset dots + custom RGB picker (native color input)
+    const swatches = [];
+    const setRing = (s, on) =>
+      (s.style.border = on ? "2px solid #fff" : "2px solid transparent");
+    const selectColor = (c, sw) => {
+      color = c;
+      swatches.forEach((o) => setRing(o, o === sw));
+      applyCursor();
+    };
+    COLORS.forEach((c) => {
       const d = el(
         "button",
         {
@@ -596,13 +604,50 @@
       );
       d.addEventListener("click", (ev) => {
         ev.preventDefault();
-        color = c;
-        dots.forEach((o) => (o.style.border = "2px solid transparent"));
-        d.style.border = "2px solid #fff";
+        selectColor(c, d);
       });
-      return d;
+      swatches.push(d);
     });
-    dots[0].style.border = "2px solid #fff";
+    setRing(swatches[0], true);
+    // custom color: rainbow swatch that opens the native RGB/hex picker
+    const customWrap = el(
+      "div",
+      {
+        width: "16px",
+        height: "16px",
+        borderRadius: "50%",
+        overflow: "hidden",
+        position: "relative",
+        cursor: "pointer",
+        flex: "0 0 auto",
+        border: "2px solid transparent",
+        background:
+          "conic-gradient(#ff3b30,#ffcc00,#34c759,#00c7be,#007aff,#af52de,#ff3b30)",
+      },
+      bar
+    );
+    const picker = el(
+      "input",
+      {
+        position: "absolute",
+        left: "-8px",
+        top: "-8px",
+        width: "32px",
+        height: "32px",
+        opacity: "0",
+        cursor: "pointer",
+        padding: "0",
+        border: "none",
+      },
+      customWrap
+    );
+    picker.type = "color";
+    picker.value = color;
+    picker.addEventListener("input", () => {
+      customWrap.style.background = picker.value;
+      selectColor(picker.value, customWrap);
+    });
+    swatches.push(customWrap);
     divider();
     mkBtn("undo", null, t("toolUndo"), () => {
       annotations.pop();
@@ -613,9 +658,22 @@
     mkBtn("save", null, t("saveTitle"), savePng);
     mkBtn("close", null, null, cleanup);
 
+    // cursor that previews the arrow sticker (tip = hotspot, current color)
+    const arrowCursor = (c) => {
+      const svg =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">' +
+        '<path d="M3 3 L27.7 9.4 L22.5 14.7 L36.6 28.8 L28.8 36.6 L14.7 22.5 L9.4 27.7 Z" fill="' +
+        c +
+        '" stroke="white" stroke-width="2" stroke-linejoin="round"/></svg>';
+      return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '") 3 3, crosshair';
+    };
+    function applyCursor() {
+      canvas.style.cursor =
+        tool === "text" ? "text" : tool === "arrow" ? arrowCursor(color) : "crosshair";
+    }
     function setTool(tl) {
       tool = tl;
-      canvas.style.cursor = tl === "text" ? "text" : "crosshair";
+      applyCursor();
       const on = (b, active) => {
         b.dataset.active = active ? "1" : "0";
         b.style.background = active ? "rgba(255,255,255,0.16)" : IDLE;
@@ -630,24 +688,40 @@
     const toBlob = () =>
       new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
 
+    // gentle exit on success (Esc/✕ stay instant — cancel should feel snappy)
+    function fadeOutAndCleanup() {
+      if (!session) return;
+      const r = session.root;
+      if (
+        window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ) {
+        cleanup();
+        return;
+      }
+      r.style.transition = "opacity 0.18s ease";
+      r.style.opacity = "0";
+      setTimeout(cleanup, 190);
+    }
+
     async function copy() {
       try {
         // build ClipboardItem synchronously to keep the user-gesture activation
         const item = new ClipboardItem({ "image/png": toBlob() });
         await navigator.clipboard.write([item]);
         toast(t("copied"));
-        cleanup();
+        fadeOutAndCleanup();
       } catch (err) {
         console.warn("[SnapJot] clipboard failed, saving PNG:", err);
         downloadBlob(await toBlob());
         toast(t("copyFellBack"));
-        cleanup();
+        fadeOutAndCleanup();
       }
     }
     async function savePng() {
       downloadBlob(await toBlob());
       toast(t("savedPng"));
-      cleanup();
+      fadeOutAndCleanup();
     }
     function downloadBlob(blob) {
       const url = URL.createObjectURL(blob);

@@ -120,7 +120,7 @@
           textBtn.click();
           mouse(canvas, "mousedown", 160, 200);
           await sleep(20);
-          const input = root.querySelector("input");
+          const input = root.querySelector('input:not([type="color"])');
           ok("text_input_opened", input);
           if (input) {
             input.value = "HERE?";
@@ -143,8 +143,8 @@
         ok("clipboard_received_png", blob && blob.type === "image/png" && blob.size > 0,
           blob ? { type: blob.type, size: blob.size } : null);
 
-        // overlay should be cleaned up after copy
-        await sleep(40);
+        // overlay should be cleaned up after copy (fade-out takes ~190ms)
+        await sleep(350);
         ok("overlay_cleaned_up", document.documentElement.lastElementChild !== root ||
           !document.querySelector("canvas"));
 
