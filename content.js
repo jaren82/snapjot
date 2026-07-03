@@ -311,22 +311,17 @@
         ctx.stroke();
         ctx.restore();
       } else {
-        // speech bubble: red rounded rect + tail pointing at the clicked spot
+        // text label: clean rounded chip at the clicked spot (no tail —
+        // pointing is the arrow sticker's job)
         ctx.font = "700 " + fontPx + "px " + FONT;
         const padX = Math.round(fontPx * 0.55);
         const padY = Math.round(fontPx * 0.4);
         const tw = ctx.measureText(a.text).width;
         const bw = tw + padX * 2;
         const bh = fontPx + padY * 2;
-        const tail = Math.max(6, Math.round(fontPx * 0.55));
         const rr = Math.round(bh * 0.32);
-        let bx = Math.round(a.x - bw * 0.2);
-        bx = Math.max(2, Math.min(bx, cw - bw - 2));
-        let by = a.y - tail - bh;
-        const below = by < 2; // no room above → flip under the point
-        if (below) by = a.y + tail;
-        const baseY = below ? by : by + bh;
-        const tipX = Math.max(bx + rr + tail, Math.min(a.x, bx + bw - rr - tail));
+        const bx = Math.max(2, Math.min(Math.round(a.x), cw - bw - 2));
+        const by = Math.max(2, Math.min(Math.round(a.y), ch - bh - 2));
 
         ctx.save();
         ctx.shadowColor = "rgba(0,0,0,0.35)";
@@ -337,12 +332,6 @@
         ctx.roundRect(bx, by, bw, bh, rr);
         ctx.fill();
         ctx.shadowColor = "transparent";
-        ctx.beginPath();
-        ctx.moveTo(a.x, a.y);
-        ctx.lineTo(tipX - tail, baseY + (below ? 1 : -1));
-        ctx.lineTo(tipX + tail, baseY + (below ? 1 : -1));
-        ctx.closePath();
-        ctx.fill();
         ctx.fillStyle = inkFor(col);
         ctx.textBaseline = "top";
         ctx.fillText(a.text, bx + padX, by + padY);
@@ -427,8 +416,8 @@
         "input",
         {
           position: "fixed",
-          left: Math.max(4, e.clientX - 12) + "px",
-          top: Math.max(4, e.clientY - 46) + "px",
+          left: Math.max(4, e.clientX) + "px",
+          top: Math.max(4, e.clientY) + "px",
           font: "700 20px " + FONT,
           color: ink,
           background: bubbleColor,
