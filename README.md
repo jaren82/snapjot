@@ -44,7 +44,7 @@ _locales/en, _locales/ko   UI strings
 
 ## Package for the store
 ```sh
-zip -r snapjot-v0.1.0.zip . -x '.git/*' 'tools/*' '*.zip' '.DS_Store'
+zip -r snapjot.zip . -x '.git/*' 'tools/*' 'test/*' 'README.md' '.gitignore' '*.zip' '.DS_Store'
 ```
 Then upload the zip at the Chrome Web Store Developer Dashboard (one-time $5 registration).
 

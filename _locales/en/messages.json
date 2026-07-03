@@ -4,6 +4,7 @@
     "message": "Snap a region, add a box or a quick note, copy to clipboard. No account, no cloud."
   },
   "actionTitle": { "message": "SnapJot: Capture (click, then drag a region)" },
+  "cmdCapture": { "message": "Start SnapJot capture" },
   "restrictedPage": {
     "message": "SnapJot: This page can't be captured.\n(chrome:// pages and the Chrome Web Store are restricted.)\nTry it on a normal web page."
   },

@@ -5,6 +5,15 @@ chrome.action.onClicked.addListener(async (tab) => {
   if (!tab || !tab.id) return;
 
   try {
+    // if an overlay from a previous invocation is still open, tear it down
+    // BEFORE capturing — otherwise it gets baked into the new screenshot
+    try {
+      await chrome.tabs.sendMessage(tab.id, { type: "SNAPJOT_RESET" });
+      await new Promise((r) => setTimeout(r, 60)); // let the DOM settle
+    } catch (_) {
+      /* content script not injected yet — nothing to reset */
+    }
+
     // activeTab permission is granted by the toolbar click (user gesture)
     const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
       format: "png",

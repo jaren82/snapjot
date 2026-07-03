@@ -19,15 +19,27 @@
   let session = null;
 
   chrome.runtime.onMessage.addListener((msg) => {
-    if (msg && msg.type === "SNAPJOT_START") start(msg.dataUrl);
+    if (!msg) return;
+    if (msg.type === "SNAPJOT_START") start(msg.dataUrl);
+    else if (msg.type === "SNAPJOT_RESET") cleanup();
   });
 
   function start(dataUrl) {
     if (session) cleanup();
-    const img = new Image();
-    img.onload = () => initSelection(img);
-    img.onerror = () => console.warn("[SnapJot] image load failed");
-    img.src = dataUrl;
+    decodePng(dataUrl)
+      .then(initSelection)
+      .catch((e) => console.warn("[SnapJot] image decode failed:", e));
+  }
+
+  // decode without a DOM <img src=data:>: strict page CSPs (img-src without
+  // data:) would block that load silently. atob + createImageBitmap is pure
+  // JS/API — no resource load, so no CSP involvement.
+  async function decodePng(dataUrl) {
+    const b64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return createImageBitmap(new Blob([bytes], { type: "image/png" }));
   }
 
   // ---------- helpers ----------
@@ -39,10 +51,14 @@
   }
 
   function onKey(e) {
-    if (e.key === "Escape") {
-      e.preventDefault();
-      cleanup();
-    }
+    if (e.key !== "Escape") return;
+    // Esc inside the note input cancels only the note (its own handler);
+    // this capture-phase listener must not tear the whole session down
+    const tg = e.target;
+    if (tg && tg.tagName === "INPUT" && session && session.root.contains(tg))
+      return;
+    e.preventDefault();
+    cleanup();
   }
 
   function cleanup() {
@@ -93,8 +109,8 @@
   function initSelection(img) {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const scaleX = img.naturalWidth / vw; // ≈ devicePixelRatio
-    const scaleY = img.naturalHeight / vh;
+    const scaleX = img.width / vw; // ≈ devicePixelRatio (img is an ImageBitmap)
+    const scaleY = img.height / vh;
 
     const root = el("div", {
       position: "fixed",
@@ -107,9 +123,10 @@
     session = { root, img, scaleX, scaleY, detachers: [] };
     document.addEventListener("keydown", onKey, true);
 
-    // captured frame as a stable backdrop
+    // captured frame as a stable backdrop (canvas, not <img src=data:> —
+    // immune to page CSP img-src restrictions)
     const backdrop = el(
-      "img",
+      "canvas",
       {
         position: "absolute",
         left: "0",
@@ -120,7 +137,9 @@
       },
       root
     );
-    backdrop.src = img.src;
+    backdrop.width = img.width;
+    backdrop.height = img.height;
+    backdrop.getContext("2d").drawImage(img, 0, 0);
 
     const dim = el(
       "div",
@@ -213,10 +232,18 @@
       dragging = false;
       const r = rectFrom(e);
       if (r.w < 5 || r.h < 5) {
-        cleanup();
+        // a plain click isn't a selection — keep the session alive and
+        // show the hint again instead of silently bailing out
+        sel.style.display = "none";
+        sizeLabel.style.display = "none";
+        dim.style.display = "block";
+        hint.style.display = "block";
         return;
       }
       root.removeEventListener("mousedown", onDown);
+      // the full-screen Enter shortcut belongs to the selection stage only —
+      // leaving it attached let every text-commit Enter re-trigger capture
+      document.removeEventListener("keydown", onEnter, true);
       sel.style.display = "none";
       sizeLabel.style.display = "none";
       enterAnnotate(r);
@@ -705,7 +732,8 @@
     // gentle exit on success (Esc/✕ stay instant — cancel should feel snappy)
     function fadeOutAndCleanup() {
       if (!session) return;
-      const r = session.root;
+      const s = session; // don't let this timer kill a *newer* session
+      const r = s.root;
       if (
         window.matchMedia &&
         window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -715,7 +743,9 @@
       }
       r.style.transition = "opacity 0.18s ease";
       r.style.opacity = "0";
-      setTimeout(cleanup, 190);
+      setTimeout(() => {
+        if (session === s) cleanup();
+      }, 190);
     }
 
     async function copy() {
@@ -738,10 +768,25 @@
       fadeOutAndCleanup();
     }
     function downloadBlob(blob) {
+      if (!blob) {
+        console.warn("[SnapJot] toBlob returned null — nothing to save");
+        return;
+      }
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "snapjot-" + Date.now() + ".png";
+      const d = new Date();
+      const p = (n) => String(n).padStart(2, "0");
+      a.download =
+        "snapjot-" +
+        d.getFullYear() +
+        p(d.getMonth() + 1) +
+        p(d.getDate()) +
+        "-" +
+        p(d.getHours()) +
+        p(d.getMinutes()) +
+        p(d.getSeconds()) +
+        ".png";
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }

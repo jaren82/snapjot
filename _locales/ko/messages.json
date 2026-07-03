@@ -4,6 +4,7 @@
     "message": "영역을 찰칵 → 박스·간단 메모 → 클립보드 복사. 계정도, 클라우드도 없습니다."
   },
   "actionTitle": { "message": "SnapJot: 캡처 (클릭 후 영역을 드래그하세요)" },
+  "cmdCapture": { "message": "SnapJot 캡처 시작" },
   "restrictedPage": {
     "message": "SnapJot: 이 페이지에서는 캡처할 수 없습니다.\n(chrome:// 페이지나 크롬 웹스토어 등은 제한됩니다)\n일반 웹페이지에서 시도해 주세요."
   },
@@ -11,7 +12,7 @@
   "toolBox": { "message": "박스" },
   "toolText": { "message": "텍스트" },
   "toolArrow": { "message": "화살표 스티커" },
-  "toolUndo": { "message": "취소" },
+  "toolUndo": { "message": "실행 취소" },
   "toolCopy": { "message": "복사" },
   "toolSave": { "message": "저장" },
   "copyTitle": { "message": "클립보드로 복사 — ⌘V로 붙여넣기" },

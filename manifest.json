@@ -23,7 +23,7 @@
         "default": "Ctrl+Shift+S",
         "mac": "Command+Shift+S"
       },
-      "description": "Start SnapJot capture"
+      "description": "__MSG_cmdCapture__"
     }
   },
   "background": {

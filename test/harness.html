@@ -21,9 +21,11 @@
   <script>
     const MSG = {
       hintSelect: "Drag to select", toolBox: "Box", toolText: "Text",
-      toolUndo: "Undo", toolCopy: "Copy", toolSave: "Save",
-      notePlaceholder: "Note…", copied: "Copied!", copyFellBack: "Saved PNG",
-      savedPng: "Saved PNG",
+      toolArrow: "Arrow sticker", toolUndo: "Undo", toolCopy: "Copy",
+      toolSave: "Save", copyTitle: "Copy to clipboard",
+      saveTitle: "Download as PNG", notePlaceholder: "Note…",
+      copied: "Copied!", copyFellBack: "Saved PNG", savedPng: "Saved PNG",
+      watermark: "created by SnapJot",
     };
     const _listeners = [];
     let __copiedBlob = null;
@@ -86,7 +88,7 @@
         window.__send({ type: "SNAPJOT_START", dataUrl });
         await sleep(60);
         const root = document.documentElement.lastElementChild;
-        ok("overlay_created", root && root.querySelector('img[src^="data:image"]'));
+        ok("overlay_created", root && root.querySelector("canvas")); // canvas backdrop (CSP-safe)
 
         // --- select region (80,90)-(340,320) : includes the green block ---
         const sx = 80, sy = 90, ex = 340, ey = 320;
@@ -94,7 +96,8 @@
         mouse(document, "mousemove", ex, ey);
         mouse(document, "mouseup", ex, ey);
         await sleep(60);
-        const canvas = root.querySelector("canvas");
+        // canvases: [0] = full backdrop, [1] = annotate canvas
+        const canvas = [...root.querySelectorAll("canvas")].pop();
         ok("annotate_canvas_present", canvas);
         if (!canvas) { out.result = "FAIL"; return out; }
 
@@ -132,6 +135,12 @@
         ok("text_added_more_red", afterText.red > afterBox.red, {
           before: afterBox.red, after: afterText.red,
         });
+
+        // regression (C1): Enter used to re-trigger full-screen capture and
+        // stack a duplicate annotate canvas on top of the session
+        ok("no_duplicate_ui_after_enter",
+          root.querySelectorAll("canvas").length === 2, // backdrop + annotate
+          root.querySelectorAll("canvas").length);
 
         // --- copy (uses our clipboard shim) ---
         const copyBtn = [...root.querySelectorAll("button")].find((b) =>
