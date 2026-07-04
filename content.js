@@ -50,6 +50,11 @@
     return e;
   }
 
+  // static SVG markup → element, without innerHTML (AMO flags innerHTML)
+  function svgEl(markup) {
+    return new DOMParser().parseFromString(markup, "image/svg+xml").documentElement;
+  }
+
   function onKey(e) {
     if (e.key !== "Escape") return;
     // Esc inside the note input cancels only the note (its own handler);
@@ -97,11 +102,13 @@
       },
       document.body
     );
-    const check =
-      '<svg width="17" height="17" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="' +
-      (accent || RED) +
-      '"/><path d="m4.8 8.2 2.2 2.2 4.2-4.6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    el2.innerHTML = check + "<span>" + text + "</span>";
+    const check = svgEl(
+      '<svg width="17" height="17" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7"/><path d="m4.8 8.2 2.2 2.2 4.2-4.6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    );
+    check.querySelector("circle").setAttribute("fill", accent || RED);
+    const label2 = document.createElement("span");
+    label2.textContent = text;
+    el2.append(check, label2);
     setTimeout(() => el2.remove(), 2800);
   }
 
@@ -585,7 +592,12 @@
         },
         bar
       );
-      b.innerHTML = ICONS[iconKey] + (label ? "<span>" + label + "</span>" : "");
+      b.append(svgEl(ICONS[iconKey]));
+      if (label) {
+        const sp = document.createElement("span");
+        sp.textContent = label;
+        b.append(sp);
+      }
       if (title) b.title = title;
       b.addEventListener("mouseenter", () => {
         if (!primary && b.dataset.active !== "1") b.style.background = HOVER;

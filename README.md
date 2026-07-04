@@ -13,10 +13,18 @@ A deliberately small, fast alternative to bloated all-in-one screenshot tools.
 4. **Copy** → it's on your clipboard. Or **Save** to download a PNG. `Esc` cancels anytime.
 
 ## Load it locally (development)
+
+**Chrome:**
 1. Open `chrome://extensions`.
 2. Turn on **Developer mode** (top-right).
 3. Click **Load unpacked** and select this `snapjot/` folder.
 4. Pin SnapJot to the toolbar, open any normal web page, and click the icon.
+
+**Firefox (and Firefox-based browsers like Zen):**
+1. Run `node tools/build.js` to generate `dist/firefox/`.
+2. Open `about:debugging#/runtime/this-firefox`.
+3. Click **Load Temporary Add-on…** and select `dist/firefox/manifest.json`.
+4. Note: the shortcut is **Alt+Shift+S** on Firefox (Cmd/Ctrl+Shift+S is taken by Firefox's built-in screenshot tool). Requires Firefox 127+ for clipboard image copy.
 
 > Protected pages (`chrome://…`, the Chrome Web Store) can't be captured — that's a browser restriction. Try it on a regular site.
 
@@ -44,11 +52,11 @@ _locales/en, _locales/ko   UI strings
 - [ ] Paid hook (v2 idea): **destructive redaction** — permanently black out sensitive info before sharing (solid fill, not reconstructable blur)
 - [ ] Publish to Chrome Web Store ($5 one-time dev registration) + first 10 users
 
-## Package for the store
+## Package for the stores
 ```sh
-zip -r snapjot.zip . -x '.git/*' 'tools/*' 'test/*' 'README.md' '.gitignore' '*.zip' '.DS_Store'
+node tools/build.js
 ```
-Then upload the zip at the Chrome Web Store Developer Dashboard (one-time $5 registration).
+Produces `dist/snapjot-chrome-v<version>.zip` (Chrome Web Store) and `dist/snapjot-firefox-v<version>.zip` (addons.mozilla.org). The Firefox manifest is derived automatically (event-page background, `browser_specific_settings.gecko`, Alt+Shift+S shortcut).
 
 ## Notes
 - Permissions are intentionally minimal: `activeTab` + `scripting` (no broad host access) — better for trust and store review.
