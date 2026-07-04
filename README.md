@@ -1,8 +1,10 @@
 # SnapJot
 
-Snap a region of any web page, add a **box** or a **quick note**, and **copy straight to your clipboard** (paste into Slack/Notion/email with `Cmd/Ctrl+V`). No account, no cloud — everything stays on your machine.
+Snap a region of any web page, add a **box**, an **arrow sticker** or a **quick note**, and **copy straight to your clipboard** (paste into Slack/Notion/email with `Cmd/Ctrl+V`). No account, no cloud — everything stays on your machine.
 
 A deliberately small, fast alternative to bloated all-in-one screenshot tools.
+
+![SnapJot demo](docs/demo.gif)
 
 ## How it works
 1. Click the SnapJot toolbar icon — or press the shortcut (default **Cmd/Ctrl + Shift + S**; change it at `chrome://extensions/shortcuts`).
