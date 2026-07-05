@@ -6,6 +6,8 @@ A deliberately small, fast alternative to bloated all-in-one screenshot tools.
 
 ![SnapJot demo](docs/demo.gif)
 
+**Install:** [Chrome Web Store](https://chromewebstore.google.com/detail/fcpjeidgllocbnbdfkidppjpbhkcglei) · Firefox — under review on AMO
+
 ## How it works
 1. Click the SnapJot toolbar icon — or press the shortcut (default **Cmd/Ctrl + Shift + S**; change it at `chrome://extensions/shortcuts`).
 2. Drag to select an area (the page freezes so the selection is stable).
@@ -50,7 +52,8 @@ _locales/en, _locales/ko   UI strings
 - [ ] Manual test in Chrome (load unpacked, see below) — **needs a human**
 - [ ] Color / line-width options
 - [ ] Paid hook (v2 idea): **destructive redaction** — permanently black out sensitive info before sharing (solid fill, not reconstructable blur)
-- [ ] Publish to Chrome Web Store ($5 one-time dev registration) + first 10 users
+- [x] Published to Chrome Web Store (2026-07-05) — Firefox/AMO under review
+- [ ] First 10 users
 
 ## Package for the stores
 ```sh
